@@ -204,6 +204,8 @@ statement:
     | T_THROW expr ';'                                      { $$ = Stmt_Throw[$2]; }
     | T_GOTO T_STRING ';'                                   { $$ = Stmt_Goto[$2]; }
     | T_STRING ':'                                          { $$ = Stmt_Label[$1]; }
+
+    | error                                                 { $$ = array(); /* means: no statement */ }
 ;
 
 catches:

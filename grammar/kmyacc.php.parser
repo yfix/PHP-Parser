@@ -25,6 +25,7 @@ class #(-p)
 #ifnot -t
     const TOKEN_NONE    = -1;
     const TOKEN_INVALID = #(YYBADCH);
+    const TOKEN_ERROR   = #(YYINTERRTOK);
 
     const TOKEN_MAP_SIZE = #(YYMAXLEX);
 
@@ -96,14 +97,49 @@ class #(-p)
     protected $yyastk;
     protected $stackPos;
     protected $lexer;
+    protected $options;
 
     /**
      * Creates a parser instance.
      *
      * @param PHPParser_Lexer $lexer A lexer
      */
-    public function __construct(PHPParser_Lexer $lexer) {
+    public function __construct(PHPParser_Lexer $lexer, array $options = array()) {
         $this->lexer = $lexer;
+        $this->options = $options + array(
+            'errorCallback' => null,
+        );
+    }
+
+    protected function buildErrorMessage($tokenId, $state) {
+        $expected = array();
+
+        $base = self::$yybase[$state];
+        for ($i = 0; $i < self::TOKEN_MAP_SIZE; ++$i) {
+            $n = $base + $i;
+            if ($n >= 0 && $n < self::YYLAST && self::$yycheck[$n] == $i
+             || $state < self::YY2TBLSTATE
+                && ($n = self::$yybase[$state + self::YYNLSTATES] + $i)
+                && $n < self::YYLAST && self::$yycheck[$n] == $i
+            ) {
+                if (self::$yyaction[$n] != self::YYUNEXPECTED) {
+                    if (count($expected) == 4) {
+                        /* Too many expected tokens */
+                        $expected = array();
+                        break;
+                    }
+
+                    $expected[] = self::$terminals[$i];
+                }
+            }
+        }
+
+        $expectedString = '';
+        if ($expected) {
+            $expectedString = ', expecting ' . implode(' or ', $expected);
+        }
+
+        return 'Syntax error, unexpected ' . self::$terminals[$tokenId] . $expectedString;
     }
 #endif
 #if -t
@@ -185,6 +221,8 @@ class #(-p)
         // Current position in the stack(s)
         $this->stackPos = 0;
 
+        $errorState = 0;
+
         for (;;) {
 #if -t
             $this->YYTRACE_NEWSTATE($state, $tokenId);
@@ -247,6 +285,10 @@ class #(-p)
                         $endAttributes = $nextEndAttributes;
                         $tokenId = self::TOKEN_NONE;
 
+                        if ($errorState) {
+                            --$errorState;
+                        }
+
                         if ($yyn < self::YYNLSTATES)
                             continue;
 
@@ -304,37 +346,50 @@ class #(-p)
                     $attributeStack[$this->stackPos] = $startAttributes;
                 } else {
                     /* error */
-                    $expected = array();
-
-                    $base = self::$yybase[$state];
-                    for ($i = 0; $i < self::TOKEN_MAP_SIZE; ++$i) {
-                        $n = $base + $i;
-                        if ($n >= 0 && $n < self::YYLAST && self::$yycheck[$n] == $i
-                         || $state < self::YY2TBLSTATE
-                            && ($n = self::$yybase[$state + self::YYNLSTATES] + $i)
-                            && $n < self::YYLAST && self::$yycheck[$n] == $i
-                        ) {
-                            if (self::$yyaction[$n] != self::YYUNEXPECTED) {
-                                if (count($expected) == 4) {
-                                    /* Too many expected tokens */
-                                    $expected = array();
-                                    break;
-                                }
-
-                                $expected[] = self::$terminals[$i];
-                            }
+                    switch ($errorState) {
+                    case 0:
+                        $msg = $this->buildErrorMessage($tokenId, $state);
+                        if ($this->options['errorCallback']) {
+                            $this->options['errorCallback']($msg, $startAttributes);
+                        } else {
+                            throw new PHPParser_Error($msg, $startAttributes['startLine']);
                         }
-                    }
+                    case 1:
+                    case 2:
+                        $errorState = 3;
+                        /* Pop until error-expecting state uncovered */
+                        while (!(($yyn = self::$yybase[$state] + self::TOKEN_ERROR) >= 0
+                                 && $yyn < self::YYLAST
+                                 && self::$yycheck[$yyn] == self::TOKEN_ERROR
+                                 || ($state < self::YY2TBLSTATE
+                                    && ($yyn = self::$yybase[$state + self::YYNLSTATES] + self::TOKEN_ERROR) >= 0
+                                    && $yyn < self::YYLAST
+                                    && self::$yycheck[$yyn] == self::TOKEN_ERROR))) {
+                            if ($this->stackPos <= 0) {
+                                throw new PHPParser_Error('Could not recover from error');
+                            }
+                            $state = $stateStack[--$this->stackPos];
+#if -t
+                            $this->YYTRACE_POP($state);
+#endif
+                        }
+                        $yyn = self::$yyaction[$yyn];
+#if -t
+                        $this->YYTRACE_SHIFT(self::TOKEN_ERROR);
+#endif
+                        $stateStack[++$this->stackPos] = $state = $yyn;
+                        break;
 
-                    $expectedString = '';
-                    if ($expected) {
-                        $expectedString = ', expecting ' . implode(' or ', $expected);
+                    case 3:
+#if -t
+                        $this->YYTRACE_DISCARD($yychar);
+#endif
+                        if ($tokenId == 0) {
+                            throw new PHPParser_Error('Could not recover from error');
+                        }
+                        $tokenId = self::TOKEN_NONE;
+                        break;
                     }
-
-                    throw new PHPParser_Error(
-                        'Syntax error, unexpected ' . self::$terminals[$tokenId] . $expectedString,
-                        $startAttributes['startLine']
-                    );
                 }
 
                 if ($state < self::YYNLSTATES)
