@@ -205,7 +205,10 @@ statement:
     | T_GOTO T_STRING ';'                                   { $$ = Stmt_Goto[$2]; }
     | T_STRING ':'                                          { $$ = Stmt_Label[$1]; }
 
-    | error                                                 { $$ = array(); /* means: no statement */ }
+    //| error                                                 { $$ = array(); /* means: no statement */ }
+    | error '}' { $$ = array(); }
+    | error ';' { $$ = array(); }
+    | expr error { $$ = array(); }
 ;
 
 catches:
