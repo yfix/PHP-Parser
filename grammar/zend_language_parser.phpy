@@ -112,7 +112,7 @@
 %%
 
 start:
-    top_statement_list                                      { $$ = Stmt\Namespace_::postprocess($1); }
+    top_statement_list                                      { $$ = $this->handleNamespaces($1); }
 ;
 
 top_statement_list:
@@ -678,7 +678,7 @@ function_call:
 ;
 
 class_name:
-      T_STATIC                                              { $$ = Name['static']; }
+      T_STATIC                                              { $$ = Name[$1]; }
     | name                                                  { $$ = $1; }
 ;
 
