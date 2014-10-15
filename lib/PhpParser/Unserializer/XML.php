@@ -49,9 +49,8 @@ class XML implements Unserializer
         }
     }
 
-    protected function readNode()
-    {
-        $className = 'PHPParser_Node_' . $this->reader->localName;
+    protected function readNode() {
+        $className = $this->getClassNameFromType($this->reader->localName);
 
         // create the node without calling it's constructor
         $node = unserialize(
@@ -135,5 +134,16 @@ class XML implements Unserializer
             $this->reader->readString(),
             $this->reader->getAttribute('line')
         );
+    }
+
+    protected function getClassNameFromType($type) {
+        $className = 'PhpParser\\Node\\' . strtr($type, '_', '\\');
+        if (!class_exists($className)) {
+            $className .= '_';
+        }
+        if (!class_exists($className)) {
+            throw new DomainException(sprintf('Unknown node type "%s"', $type));
+        }
+        return $className;
     }
 }

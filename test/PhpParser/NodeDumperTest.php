@@ -6,12 +6,12 @@ class NodeDumperTest extends \PHPUnit_Framework_TestCase
 {
     /**
      * @dataProvider provideTestDump
-     * @covers NodeDumper::dump
+     * @covers PhpParser\NodeDumper::dump
      */
     public function testDump($node, $dump) {
         $dumper = new NodeDumper;
 
-        $this->assertEquals($dump, $dumper->dump($node));
+        $this->assertSame($dump, $dumper->dump($node));
     }
 
     public function provideTestDump() {

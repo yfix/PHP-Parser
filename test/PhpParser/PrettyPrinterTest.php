@@ -11,7 +11,7 @@ class PrettyPrinterTest extends CodeTestAbstract
         $prettyPrinter = new PrettyPrinter\Standard;
 
         $stmts = $parser->parse($code);
-        $this->assertEquals(
+        $this->assertSame(
             $this->canonicalize($dump),
             $this->canonicalize($prettyPrinter->$method($stmts)),
             $name
@@ -20,7 +20,7 @@ class PrettyPrinterTest extends CodeTestAbstract
 
     /**
      * @dataProvider provideTestPrettyPrint
-     * @covers PrettyPrinter\Standard<extended>
+     * @covers PhpParser\PrettyPrinter\Standard<extended>
      */
     public function testPrettyPrint($name, $code, $dump) {
         $this->doTestPrettyPrintMethod('prettyPrint', $name, $code, $dump);
@@ -28,7 +28,7 @@ class PrettyPrinterTest extends CodeTestAbstract
 
     /**
      * @dataProvider provideTestPrettyPrintFile
-     * @covers PrettyPrinter\Standard<extended>
+     * @covers PhpParser\PrettyPrinter\Standard<extended>
      */
     public function testPrettyPrintFile($name, $code, $dump) {
         $this->doTestPrettyPrintMethod('prettyPrintFile', $name, $code, $dump);

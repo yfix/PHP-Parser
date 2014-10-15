@@ -46,7 +46,7 @@ XML;
         $xml = <<<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <AST xmlns:node="http://nikic.github.com/PHPParser/XML/node">
- <node:Scalar_ClassConst />
+ <node:Scalar_MagicConst_Class />
 </AST>
 XML;
 
@@ -140,6 +140,10 @@ XML;
             array(
                 '<node:Scalar_String><subNode:value/></node:Scalar_String>',
                 'Expected node or scalar'
+            ),
+            array(
+                '<node:Foo><subNode:value/></node:Foo>',
+                'Unknown node type "Foo"'
             ),
         );
     }
